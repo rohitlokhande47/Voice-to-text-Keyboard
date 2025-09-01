@@ -7,9 +7,14 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.setViewTreeLifecycleOwner
@@ -20,11 +25,13 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.example.voice_to_textkeyboard.ui.KeyboardState
 import com.example.voice_to_textkeyboard.ui.VoiceKeyboardUI
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
+
 
 class VoiceKeyboardIME : InputMethodService(), ViewModelStoreOwner, SavedStateRegistryOwner, LifecycleOwner {
 
@@ -33,6 +40,7 @@ class VoiceKeyboardIME : InputMethodService(), ViewModelStoreOwner, SavedStateRe
     private lateinit var audioRecorder: AudioRecorder
     private lateinit var whisperApiService: WhisperApiService
     private var keyboardState by mutableStateOf(KeyboardState.IDLE)
+    private var transcriptionMode by mutableStateOf(TranscriptionMode.NORMAL)
     private var composeView: ComposeView? = null
 
     private val job = SupervisorJob()
@@ -83,10 +91,14 @@ class VoiceKeyboardIME : InputMethodService(), ViewModelStoreOwner, SavedStateRe
             setContent {
                 VoiceKeyboardUI(
                     keyboardState = keyboardState,
+                    transcriptionMode = transcriptionMode,
+                    onTranscriptionModeChanged = { mode ->
+                        transcriptionMode = mode
+                    },
                     onStartRecording = { startRecording() },
                     onStopRecording = { stopRecording() },
                     onBackspace = { handleBackspace() },
-                    onSpacePressed = { handleSpacePressed() } ,
+                    onSpacePressed = { handleSpacePressed() },
                     onEnterPressed = { handleEnterPressed() },
                     onUndoPressed = { handleUndo() },
                     onRedoPressed = { handleRedo() },
@@ -119,7 +131,14 @@ class VoiceKeyboardIME : InputMethodService(), ViewModelStoreOwner, SavedStateRe
 
     private suspend fun processTranscription(audioFile: File) {
         try {
-            val result = whisperApiService.transcribeAudio(audioFile)
+            val result = if (transcriptionMode == TranscriptionMode.SUMMARIZE) {
+                // Call summarization API
+                whisperApiService.summarizeAudio(audioFile)
+            } else {
+                // Regular transcription
+                whisperApiService.transcribeAudio(audioFile)
+            }
+
             withContext(Dispatchers.Main) {
                 result.fold(
                     onSuccess = { transcription ->

@@ -5,8 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,14 +18,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.voice_to_textkeyboard.R
+import com.example.voice_to_textkeyboard.TranscriptionMode
 
 enum class KeyboardState {
     IDLE, RECORDING, PROCESSING
 }
 
+
 @Composable
 fun VoiceKeyboardUI(
     keyboardState: KeyboardState,
+    transcriptionMode: com.example.voice_to_textkeyboard.TranscriptionMode = TranscriptionMode.NORMAL,
+    onTranscriptionModeChanged: (TranscriptionMode) -> Unit = {},
     onStartRecording: () -> Unit,
     onStopRecording: () -> Unit,
     onBackspace: () -> Unit = {},
@@ -43,10 +45,14 @@ fun VoiceKeyboardUI(
         KeyboardState.PROCESSING -> Color(0xFFFF9800)
     }
 
-    val buttonText = when (keyboardState) {
-        KeyboardState.IDLE -> "Hold to Record"
-        KeyboardState.RECORDING -> "Recording..."
-        KeyboardState.PROCESSING -> "Processing..."
+    val buttonText = when {
+        keyboardState == KeyboardState.IDLE && transcriptionMode == TranscriptionMode.NORMAL ->
+            "Hold to Record"
+        keyboardState == KeyboardState.IDLE && transcriptionMode == TranscriptionMode.SUMMARIZE ->
+            "Hold to Record for Summary"
+        keyboardState == KeyboardState.RECORDING -> "Recording..."
+        keyboardState == KeyboardState.PROCESSING -> "Processing..."
+        else -> "Hold to Record"
     }
 
     var isPressed by remember { mutableStateOf(false) }
@@ -57,9 +63,74 @@ fun VoiceKeyboardUI(
             .fillMaxWidth()
             .background(Color(0xFF263238))
             .padding(horizontal = 8.dp, vertical = 12.dp)
-            .height(200.dp),
+            .height(220.dp), // Increased height to accommodate new button
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Add summarization mode toggle before recording button
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(bottom = 8.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF37474F))
+            ) {
+                Row {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(
+                                if (transcriptionMode == TranscriptionMode.NORMAL)
+                                    Color(0xFF4CAF50) else Color(0xFF37474F)
+                            )
+                            .clickable { onTranscriptionModeChanged(TranscriptionMode.NORMAL) }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Transcribe",
+                            fontSize = 14.sp,
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(
+                                if (transcriptionMode == TranscriptionMode.SUMMARIZE)
+                                    Color(0xFF2196F3) else Color(0xFF37474F)
+                            )
+                            .clickable { onTranscriptionModeChanged(TranscriptionMode.SUMMARIZE) }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.wave_sound),
+                                contentDescription = "Summarize",
+                                tint = Color.White,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Summarize",
+                                fontSize = 14.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            }
+        }
         // Voice recording button with enhanced visual feedback
         Box(
             modifier = Modifier
@@ -138,7 +209,10 @@ fun VoiceKeyboardUI(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Converting speech to text...",
+                text = if (transcriptionMode == TranscriptionMode.SUMMARIZE)
+                    "Summarizing your speech..."
+                else
+                    "Converting speech to text...",
                 fontSize = 12.sp,
                 color = Color(0xFFB0BEC5),
                 textAlign = TextAlign.Center

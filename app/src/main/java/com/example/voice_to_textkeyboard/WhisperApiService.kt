@@ -1,5 +1,6 @@
 package com.example.voice_to_textkeyboard
 
+import android.util.Log
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -33,6 +34,16 @@ interface WhisperApiInterface {
         @Part("temperature") temperature: RequestBody,
         @Part("response_format") responseFormat: RequestBody
     ): Response<TranscriptionResponse>
+
+    @Multipart
+    @POST("openai/v1/audio/transcriptions")
+    suspend fun summarizeAudio(
+        @Header("Authorization") authorization: String,
+        @Part file: MultipartBody.Part,
+        @Part("model") model: RequestBody,
+        @Part("prompt") prompt: RequestBody,
+        @Part("response_format") responseFormat: RequestBody
+    ): Response<TranscriptionResponse>
 }
 
 class WhisperApiService {
@@ -58,6 +69,7 @@ class WhisperApiService {
     private val api = retrofit.create(WhisperApiInterface::class.java)
 
     suspend fun transcribeAudio(audioFile: File): Result<String> {
+        Log.d("WhisperAPI", "Starting transcription for file: ${audioFile.name}, size: ${audioFile.length()}")
         return try {
             val requestFile = RequestBody.create(
                 "audio/m4a".toMediaTypeOrNull(),
@@ -84,11 +96,57 @@ class WhisperApiService {
 
             if (response.isSuccessful) {
                 val transcription = response.body()?.text ?: ""
+                Log.d("WhisperAPI", "Starting transcription for file: ${audioFile.name}, size: ${audioFile.length()}")
                 Result.success(transcription)
             } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e("WhisperAPI", "API Error: ${response.code()} ${response.message()} - Body: $errorBody")
                 Result.failure(Exception("API Error: ${response.code()} ${response.message()}"))
             }
         } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun summarizeAudio(audioFile: File): Result<String> {
+        Log.d("WhisperAPI", "Starting summarization for file: ${audioFile.name}, size: ${audioFile.length()}")
+        return try {
+            val requestFile = RequestBody.create(
+                "audio/wav".toMediaTypeOrNull(),
+                audioFile
+            )
+
+            val filePart = MultipartBody.Part.createFormData(
+                "file",
+                audioFile.name,
+                requestFile
+            )
+
+            // In summarizeAudio method
+            val model = RequestBody.create("text/plain".toMediaTypeOrNull(), "whisper-large-v3")
+            val prompt = RequestBody.create("text/plain".toMediaTypeOrNull(),
+                "Please summarize the following speech concisely.")
+            val responseFormat = RequestBody.create("text/plain".toMediaTypeOrNull(), "json")
+
+            val response = api.summarizeAudio(
+                authorization = "Bearer $apiKey",
+                file = filePart,
+                model = model,
+                prompt = prompt,
+                responseFormat = responseFormat
+            )
+
+            if (response.isSuccessful) {
+                val summarizedText = response.body()?.text ?: ""
+                Log.d("WhisperAPI", "Summarization successful: $summarizedText")
+                Result.success(summarizedText)
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e("WhisperAPI", "API Error: ${response.code()} ${response.message()} - Body: $errorBody")
+                Result.failure(Exception("API Error: ${response.code()} ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Log.e("WhisperAPI", "Summarization failed", e)
             Result.failure(e)
         }
     }
