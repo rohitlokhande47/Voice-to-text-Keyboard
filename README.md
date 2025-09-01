@@ -1,4 +1,3 @@
-Here’s a clean and easy-to-read **README.md** for your project. I’ve made it visually appealing, structured, and beginner-friendly while also including technical details for developers.
 
 ---
 
