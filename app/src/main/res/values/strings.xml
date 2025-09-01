@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Voice-to-Text Keyboard</string>
+    <!-- FIXED: Added missing closing bracket -->
+    <string name="keyboard_name">Voice-to-Text Keyboard</string>
+    <string name="record_button">Hold to Record</string>
+    <string name="recording">Recording...</string>
+    <string name="processing">Processing...</string>
+    <string name="error_recording">Error during recording</string>
+    <string name="error_transcription">Error during transcription</string>
+</resources>
