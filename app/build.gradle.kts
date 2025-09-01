@@ -15,6 +15,8 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        buildConfigField("String", "WHISPER_API_KEY", "\"${project.findProperty("WHISPER_API_KEY") ?: ""}\"")
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -39,6 +41,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"

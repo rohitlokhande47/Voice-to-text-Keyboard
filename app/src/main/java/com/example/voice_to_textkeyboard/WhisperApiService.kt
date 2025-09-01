@@ -36,7 +36,7 @@ interface WhisperApiInterface {
 }
 
 class WhisperApiService {
-    private val apiKey = "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" // Replace with actual API key
+    private val apiKey = BuildConfig.WHISPER_API_KEY
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
