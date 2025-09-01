@@ -82,8 +82,7 @@ WHISPER_API_KEY=your_api_key_here
 ---
 
 ## 📸 Screenshots (Optional)
-
-> *(Add screenshots/gifs of your keyboard UI and transcription in action)*
+https://github.com/user-attachments/assets/61a9ad7f-d29a-40bf-9d17-ad24c827b027
 
 ---
 
